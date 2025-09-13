@@ -1,26 +1,45 @@
-# Productivity Agent
+## Life Productivity Planner Agent (MVP)
 
-A productivity management application.
+Next.js + Supabase + Notion OAuth scaffold.
 
-## Getting Started
+### Setup
 
-This project is designed to help improve productivity through various tools and features.
+1) Copy environment variables:
 
-## Features
+```bash
+cp .env.example .env.local
+```
 
-- Task management
-- Time tracking
-- Goal setting
-- Progress monitoring
+2) Fill in values:
+- NOTION_CLIENT_ID / NOTION_CLIENT_SECRET from your Notion integration
+- NOTION_REDIRECT_URI: `http://localhost:3000/api/notion/callback`
+- SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY from your Supabase project
+- NEXT_PUBLIC_SITE_URL: `http://localhost:3000`
 
-## Installation
+3) Apply Supabase schema (SQL):
 
-Instructions will be added as the project develops.
+```sql
+-- Run in Supabase SQL editor
+-- Use the contents of supabase.sql
+```
 
-## Contributing
+4) Install and run:
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+```bash
+npm install
+npm run dev
+```
 
-## License
+### OAuth Flow
+- GET `/api/notion/connect` → redirect to Notion consent
+- GET `/api/notion/callback` → exchange code, store token in `notion_credentials`
 
-This project is open source and available under the [MIT License](LICENSE).
+### Database Reader APIs
+- GET `/api/notion/databases?type=journal|tasks|goals` → list matching databases
+- GET `/api/notion/query?databaseId=...` → query database rows
+
+### Roadmap
+- Add OpenAI-powered planning, reflection, and rewriting endpoints
+- Build dashboard views for Journal, Tasks, Goals
+- Add session auth to bind users to workspaces
+
