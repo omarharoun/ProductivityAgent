@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createNotionClientAny } from '@/lib/notion';
+import { createNotionClient } from '@/lib/notion';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing databaseId' }, { status: 400 });
   }
   try {
-    const notion = await createNotionClientAny();
+    const notion = createNotionClient();
     const result = await notion.databases.query({ database_id: databaseId });
     return NextResponse.json(result);
   } catch (e: any) {
