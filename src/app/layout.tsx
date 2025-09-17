@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import dynamic from 'next/dynamic';
+
+const VoiceAgent = dynamic(() => import('./components/VoiceAgent'), { ssr: false });
 
 export const metadata: Metadata = {
   title: 'Life Productivity Planner Agent',
@@ -9,7 +12,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        <VoiceAgent />
+      </body>
     </html>
   );
 }
