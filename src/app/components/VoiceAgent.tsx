@@ -2,16 +2,41 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-type RecognitionType = typeof window extends any
-  ? (window & { webkitSpeechRecognition?: any }).webkitSpeechRecognition | SpeechRecognition | null
-  : any;
+type WebSpeechRecognitionEvent = {
+  resultIndex: number;
+  results: ArrayLike<{ 0: { transcript: string } }>;
+};
+
+type WebSpeechRecognition = {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  onresult: ((event: WebSpeechRecognitionEvent) => void) | null;
+  onerror: ((event: any) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+
+type ChatMessage = {
+  id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+};
 
 export default function VoiceAgent(): JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState("");
-  const [response, setResponse] = useState("");
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const [inputText, setInputText] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: "greeting",
+      role: "assistant",
+      content: "Hi! I’m your AI planner. Ask me anything about your Notion workspace.",
+    },
+  ]);
+  const recognitionRef = useRef<WebSpeechRecognition | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
 
   const supportsSpeech = useMemo(() => {
     if (typeof window === "undefined") return false;
@@ -27,16 +52,16 @@ export default function VoiceAgent(): JSX.Element {
     const SpeechRecognitionImpl =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognitionImpl) return null;
-    const rec: SpeechRecognition = new SpeechRecognitionImpl();
+    const rec: WebSpeechRecognition = new SpeechRecognitionImpl();
     rec.lang = "en-US";
     rec.interimResults = true;
     rec.continuous = true;
-    rec.onresult = (event: SpeechRecognitionEvent) => {
+    rec.onresult = (event: WebSpeechRecognitionEvent) => {
       let text = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         text += event.results[i][0].transcript;
       }
-      setTranscript(text.trim());
+      setInputText(text.trim());
     };
     rec.onerror = () => {
       setIsListening(false);
@@ -56,7 +81,7 @@ export default function VoiceAgent(): JSX.Element {
       try { rec.stop(); } catch {}
       setIsListening(false);
     } else {
-      setTranscript("");
+      setInputText("");
       try { rec.start(); setIsListening(true); } catch {}
     }
   }, [ensureRecognition, isListening, supportsSpeech]);
@@ -77,14 +102,25 @@ export default function VoiceAgent(): JSX.Element {
     };
   }, []);
 
+  useEffect(() => {
+    if (!listRef.current) return;
+    try {
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+    } catch {}
+  }, [messages]);
+
   const handleSend = useCallback(async () => {
-    const userText = transcript.trim();
+    const userText = inputText.trim();
     if (!userText) return;
-    // Placeholder: echo response. Replace with API call to your AI backend if available.
-    const reply = `I heard: "${userText}". How can I help with your Notion planning?`;
-    setResponse(reply);
-    speak(reply);
-  }, [speak, transcript]);
+    const newUser: ChatMessage = { id: `u-${Date.now()}`, role: "user", content: userText };
+    setMessages((prev) => [...prev, newUser]);
+    setInputText("");
+    // Placeholder assistant reply. Replace with a real API.
+    const replyText = `You said: "${userText}". I can help find Notion databases, structure tasks, or draft entries.`;
+    const newAssistant: ChatMessage = { id: `a-${Date.now()}`, role: "assistant", content: replyText };
+    setMessages((prev) => [...prev, newAssistant]);
+    speak(replyText);
+  }, [inputText, speak]);
 
   return (
     <>
@@ -103,33 +139,37 @@ export default function VoiceAgent(): JSX.Element {
               <h3 style={{ margin: 0 }}>AI Voice Agent</h3>
               <button className="voice-agent-close" onClick={() => setIsOpen(false)}>✕</button>
             </div>
-            <div className="voice-agent-body">
-              <div className="voice-agent-stt">
-                <label htmlFor="transcript">You</label>
-                <textarea
-                  id="transcript"
-                  value={transcript}
-                  onChange={(e) => setTranscript(e.target.value)}
-                  placeholder={supportsSpeech ? "Speak or type your request..." : "Type your request..."}
-                  rows={4}
-                />
-                <div className="voice-agent-actions">
-                  <button onClick={toggleListening} disabled={!supportsSpeech}>
-                    {isListening ? "Stop" : "Start"} Listening
-                  </button>
-                  <button onClick={handleSend}>
-                    Send
-                  </button>
-                </div>
+            <div className="voice-agent-chat">
+              <div className="voice-agent-messages" ref={listRef}>
+                {messages.map((m) => (
+                  <div key={m.id} className={`voice-agent-message ${m.role}`}>
+                    {m.content}
+                  </div>
+                ))}
               </div>
-              <div className="voice-agent-tts">
-                <label htmlFor="response">Agent</label>
-                <textarea id="response" value={response} readOnly rows={4} placeholder="Response will appear here" />
-                <div className="voice-agent-actions">
-                  <button onClick={() => speak(response)} disabled={!response}>
-                    Play Response
-                  </button>
-                </div>
+              <div className="voice-agent-inputRow">
+                <button
+                  className="voice-agent-mic"
+                  onClick={toggleListening}
+                  disabled={!supportsSpeech}
+                  aria-pressed={isListening}
+                  title={supportsSpeech ? (isListening ? "Stop listening" : "Start listening") : "Speech not supported"}
+                >
+                  {isListening ? "■" : "🎤"}
+                </button>
+                <input
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder={supportsSpeech ? "Speak or type your message" : "Type your message"}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                />
+                <button onClick={handleSend}>Send</button>
               </div>
             </div>
           </div>
