@@ -1,14 +1,57 @@
-import { NextResponse } from 'next/server';
-import { env } from '@/lib/env';
+import { NextRequest, NextResponse } from 'next/server';
+import { createNotionClient } from '@/lib/notion';
 
-export async function GET() {
-  const params = new URLSearchParams({
-    client_id: env.NOTION_CLIENT_ID,
-    redirect_uri: env.NOTION_REDIRECT_URI,
-    response_type: 'code',
-    owner: 'user'
-  });
-  const url = `https://api.notion.com/v1/oauth/authorize?${params.toString()}`;
-  return NextResponse.redirect(url);
+export async function GET(req: NextRequest) {
+  try {
+    const notion = createNotionClient();
+    
+    // Test the connection by making a simple API call
+    const response = await notion.users.me({});
+    
+    return NextResponse.json({ 
+      success: true, 
+      user: {
+        id: response.id,
+        name: response.name,
+        email: 'person' in response ? response.person?.email : undefined
+      }
+    });
+  } catch (error: any) {
+    return NextResponse.json({ 
+      success: false, 
+      error: error.message 
+    }, { status: 500 });
+  }
 }
 
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { action } = body;
+    
+    if (action === 'test') {
+      const notion = createNotionClient();
+      const response = await notion.users.me({});
+      
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Notion connection successful',
+        user: {
+          id: response.id,
+          name: response.name,
+          email: 'person' in response ? response.person?.email : undefined
+        }
+      });
+    }
+    
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Invalid action' 
+    }, { status: 400 });
+  } catch (error: any) {
+    return NextResponse.json({ 
+      success: false, 
+      error: error.message 
+    }, { status: 500 });
+  }
+}

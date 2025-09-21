@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createNotionClientAny } from '@/lib/notion';
+import { createNotionClient } from '@/lib/notion';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const type = searchParams.get('type') ?? 'journal';
   try {
-    const notion = await createNotionClientAny();
+    const notion = createNotionClient();
     const search = await notion.search({ query: '', filter: { property: 'object', value: 'database' } });
     const databases = (search.results || []).map(r => ({ id: (r as any).id, title: extractTitle(r) }));
     const filtered = databases.filter(d => matchDbType(d.title, type));
