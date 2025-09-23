@@ -6,14 +6,14 @@ export async function GET(req: NextRequest) {
     const notion = createNotionClient();
     
     // Test the connection by making a simple API call
-    const response = await notion.users.me({});
+    const response = await notion.users.me();
     
     return NextResponse.json({ 
       success: true, 
       user: {
         id: response.id,
         name: response.name,
-        email: 'person' in response ? response.person?.email : undefined
+        email: response.person?.email
       }
     });
   } catch (error: any) {
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     
     if (action === 'test') {
       const notion = createNotionClient();
-      const response = await notion.users.me({});
+      const response = await notion.users.me();
       
       return NextResponse.json({ 
         success: true, 
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
         user: {
           id: response.id,
           name: response.name,
-          email: 'person' in response ? response.person?.email : undefined
+          email: response.person?.email
         }
       });
     }
