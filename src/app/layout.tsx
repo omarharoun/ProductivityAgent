@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import VoiceAssistant from './components/VoiceAssistant';
+import Sidebar from './components/Sidebar';
 
 export const metadata: Metadata = {
   title: 'Life Productivity Planner Agent',
@@ -11,6 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
+        <Sidebar />
         {children}
         <VoiceAssistant />
       </body>
